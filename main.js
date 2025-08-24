@@ -1,5 +1,18 @@
-const { app, BrowserWindow, ipcMain, desktopCapturer } = require('electron');
+const { app, BrowserWindow, ipcMain, desktopCapturer, systemPreferences } = require('electron');
 const path = require('path');
+
+async function requestMediaPermissions() {
+  if (process.platform !== 'darwin') {
+    return;
+  }
+  try {
+    const microphone = await systemPreferences.askForMediaAccess('microphone');
+    const camera = await systemPreferences.askForMediaAccess('camera');
+    console.log(`macOS Permissions: microphone=${microphone}, camera=${camera}`);
+  } catch (error) {
+    console.error('Could not get media permissions', error);
+  }
+}
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -23,7 +36,8 @@ ipcMain.handle('get-sources', async () => {
   return await desktopCapturer.getSources({ types: ['window', 'screen'] });
 });
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await requestMediaPermissions();
   createWindow();
 
   app.on('activate', function () {
