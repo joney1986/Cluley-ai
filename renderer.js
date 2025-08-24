@@ -1,7 +1,3 @@
-// IMPORTANT: You must import RecordRTC from the installed package.
-// Since we are in a Node.js environment via Electron, we can use require.
-const RecordRTC = require('recordrtc');
-
 const startStopBtn = document.getElementById('startStopBtn');
 const transcriptDiv = document.getElementById('transcript');
 const summaryDiv = document.getElementById('summary');
@@ -54,6 +50,7 @@ const startRecording = async () => {
         socket.onopen = () => {
             console.log('WebSocket connected.');
             transcriptDiv.textContent = 'Capturing audio...';
+            const RecordRTC = window.electronAPI.RecordRTC;
             recorder = new RecordRTC(stream, {
                 type: 'audio',
                 mimeType: 'audio/webm;codecs=pcm',
