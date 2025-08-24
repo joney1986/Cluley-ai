@@ -32,6 +32,12 @@
       "target": [
         "AppImage"
       ]
+    },
+    "mac": {
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "This app needs access to your microphone to transcribe your system audio.",
+        "NSCameraUsageDescription": "This app needs access to your camera to capture your screen for transcription."
+      }
     }
   }
 }
