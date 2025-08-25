@@ -286,12 +286,62 @@ async function detectQuestionAndSuggest(text) {
         console.log(`Intent analysis for "${trimmedText}": ${intentResponse}`);
 
         if (intentResponse.includes('yes')) {
-            console.log('Question detected, getting suggestion...');
-            getInterviewSuggestion(trimmedText);
+            console.log('Question detected. Classifying question type...');
+
+            const behavioralResponse = await fetch(openaiURL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${OPENAI_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-3.5-turbo',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: "Is the following a behavioral interview question that asks for a specific story or example? Respond with only the single word 'yes' or 'no'."
+                        },
+                        {
+                            role: 'user',
+                            content: trimmedText
+                        }
+                    ],
+                    max_tokens: 3,
+                    temperature: 0.1
+                })
+            });
+
+            if (!behavioralResponse.ok) {
+                // Don't throw an error, just log it and proceed with normal suggestion
+                console.error('Behavioral detection API call failed.');
+            } else {
+                const behavioralData = await behavioralResponse.json();
+                const behavioralResult = behavioralData.choices[0].message.content.trim().toLowerCase();
+                console.log(`Behavioral analysis result: ${behavioralResult}`);
+
+                if (behavioralResult.includes('yes')) {
+                    displayStarFramework();
+                } else {
+                    getInterviewSuggestion(trimmedText);
+                }
+            } else {
+                // If behavioral detection fails, fall back to a normal suggestion.
+                getInterviewSuggestion(trimmedText);
+            }
         }
 
     } catch (err) {
         console.error('Error in question detection:', err);
         // We don't show this error in the UI to avoid cluttering the suggestions panel
     }
+}
+
+function displayStarFramework() {
+    suggestionsDiv.innerHTML = `
+        <h3>STAR Method for Behavioral Questions</h3>
+        <p><strong>S - Situation:</strong> Describe the context. Where and when did this happen?</p>
+        <p><strong>T - Task:</strong> What was your specific goal or responsibility?</p>
+        <p><strong>A - Action:</strong> What specific steps did <strong>you</strong> take? Use "I" statements.</p>
+        <p><strong>R - Result:</strong> What was the outcome? Quantify your success if possible.</p>
+    `;
 }
