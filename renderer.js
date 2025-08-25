@@ -87,7 +87,7 @@ const startRecording = async () => {
                 const newText = data.text;
                 finalizedTranscript += newText + ' ';
                 currentUtterance = '';
-                detectQuestionAndSuggest(newText);
+                getSmartSuggestion(newText);
             }
             transcriptDiv.textContent = finalizedTranscript + currentUtterance;
         };
@@ -150,9 +150,7 @@ const stopRecording = async () => {
     try {
         const resumeText = resumeInput.value;
         const jobDescText = jobDescInput.value;
-
         const systemPrompt = `You are an expert interview coach. Based on the following resume and job description, provide a personalized and strong answer to the user's question.`;
-
         const userPrompt = `My resume:\n${resumeText}\n\nJob Description:\n${jobDescText}\n\nQuestion:\n${questionText}`;
 
         const response = await fetch(openaiURL, {
@@ -170,7 +168,7 @@ const stopRecording = async () => {
                     },
                     {
                         role: 'user',
-                        content: questionText
+                        content: transcriptText
                     }
                 ]
             })
@@ -247,9 +245,28 @@ getSuggestionBtn.addEventListener('click', async () => {
     getInterviewSuggestion(transcriptText);
 });
 
-async function detectQuestionAndSuggest(text) {
+async function getSmartSuggestion(text) {
     const trimmedText = text.trim();
     if (!trimmedText) return;
+
+    const resumeText = resumeInput.value;
+    const jobDescText = jobDescInput.value;
+
+    const systemPrompt = `You are an advanced interview copilot assistant. Your task is to analyze a sentence from an interview transcript and determine the appropriate action. You must return a single JSON object with the following structure:
+{
+  "is_question": boolean,
+  "question_type": "behavioral" | "standard" | "none",
+  "response_type": "star_method" | "direct_answer" | "none",
+  "response_content": string
+}
+
+- Set "is_question" to true if the sentence is a question that requires an answer.
+- If it is a question, classify its "question_type". Use "behavioral" if it asks for a story or example (e.g., "Tell me about a time..."). Otherwise, use "standard".
+- Based on the type, set the "response_type". For "behavioral" questions, set it to "star_method". For "standard" questions, set it to "direct_answer".
+- For a "direct_answer", generate a personalized, strong answer based on the provided resume and job description and put it in "response_content". For all other cases, "response_content" should be an empty string.
+- If the sentence is not a question, set "is_question" to false and the other fields to "none" or empty.`;
+
+    const userPrompt = `My resume:\n${resumeText}\n\nJob Description:\n${jobDescText}\n\nInterview Sentence:\n${trimmedText}`;
 
     try {
         const response = await fetch(openaiURL, {
@@ -261,78 +278,33 @@ async function detectQuestionAndSuggest(text) {
             body: JSON.stringify({
                 model: 'gpt-3.5-turbo',
                 messages: [
-                    {
-                        role: 'system',
-                        content: "Does the following sentence contain a question that a person should answer in an interview? Respond with only the single word 'yes' or 'no'."
-                    },
-                    {
-                        role: 'user',
-                        content: trimmedText
-                    }
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
                 ],
-                max_tokens: 3, // Limit response to a few tokens
-                temperature: 0.1 // Low temperature for deterministic response
+                response_format: { type: "json_object" }
             })
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`OpenAI API Error for intent detection: ${errorData.error.message}`);
+            throw new Error(`OpenAI API Error: ${response.statusText}`);
         }
 
         const data = await response.json();
-        const intentResponse = data.choices[0].message.content.trim().toLowerCase();
+        const suggestionObject = JSON.parse(data.choices[0].message.content);
 
-        console.log(`Intent analysis for "${trimmedText}": ${intentResponse}`);
+        console.log('Received smart suggestion object:', suggestionObject);
 
-        if (intentResponse.includes('yes')) {
-            console.log('Question detected. Classifying question type...');
-
-            const behavioralResponse = await fetch(openaiURL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${OPENAI_API_KEY}`
-                },
-                body: JSON.stringify({
-                    model: 'gpt-3.5-turbo',
-                    messages: [
-                        {
-                            role: 'system',
-                            content: "Is the following a behavioral interview question that asks for a specific story or example? Respond with only the single word 'yes' or 'no'."
-                        },
-                        {
-                            role: 'user',
-                            content: trimmedText
-                        }
-                    ],
-                    max_tokens: 3,
-                    temperature: 0.1
-                })
-            });
-
-            if (!behavioralResponse.ok) {
-                // Don't throw an error, just log it and proceed with normal suggestion
-                console.error('Behavioral detection API call failed.');
-            } else {
-                const behavioralData = await behavioralResponse.json();
-                const behavioralResult = behavioralData.choices[0].message.content.trim().toLowerCase();
-                console.log(`Behavioral analysis result: ${behavioralResult}`);
-
-                if (behavioralResult.includes('yes')) {
-                    displayStarFramework();
-                } else {
-                    getInterviewSuggestion(trimmedText);
-                }
-            } else {
-                // If behavioral detection fails, fall back to a normal suggestion.
-                getInterviewSuggestion(trimmedText);
+        if (suggestionObject.is_question) {
+            if (suggestionObject.response_type === 'star_method') {
+                displayStarFramework();
+            } else if (suggestionObject.response_type === 'direct_answer') {
+                suggestionsDiv.textContent = suggestionObject.response_content;
             }
         }
+        // If is_question is false, we do nothing.
 
     } catch (err) {
-        console.error('Error in question detection:', err);
-        // We don't show this error in the UI to avoid cluttering the suggestions panel
+        console.error('Error getting smart suggestion:', err);
     }
 }
 
