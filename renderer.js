@@ -1,6 +1,7 @@
 const startStopBtn = document.getElementById('startStopBtn');
+const getSuggestionBtn = document.getElementById('getSuggestionBtn');
 const transcriptDiv = document.getElementById('transcript');
-const summaryDiv = document.getElementById('summary');
+const suggestionsDiv = document.getElementById('suggestions');
 
 // --- State Variables ---
 let isRecording = false;
@@ -26,7 +27,7 @@ startStopBtn.addEventListener('click', async () => {
 
 const startRecording = async () => {
     transcriptDiv.textContent = 'Connecting...';
-    summaryDiv.textContent = '';
+    suggestionsDiv.textContent = '';
 
     if (!ASSEMBLYAI_API_KEY || ASSEMBLYAI_API_KEY === "YOUR_ASSEMBLYAI_API_KEY") {
         alert("Please replace 'YOUR_ASSEMBLYAI_API_KEY' in renderer.js with your AssemblyAI API key.");
@@ -120,17 +121,17 @@ const stopRecording = async () => {
     }
 
     // --- Trigger Summarization ---
-    summaryDiv.textContent = 'Summarizing...';
+    suggestionsDiv.textContent = 'Summarizing...';
     const transcriptText = transcriptDiv.textContent;
 
     if (!transcriptText.trim()) {
-        summaryDiv.textContent = 'Nothing to summarize.';
+        suggestionsDiv.textContent = 'Nothing to summarize.';
         return;
     }
 
     if (!OPENAI_API_KEY || OPENAI_API_KEY === "YOUR_OPENAI_API_KEY") {
         alert("Please replace 'YOUR_OPENAI_API_KEY' in renderer.js with your OpenAI API key to enable summarization.");
-        summaryDiv.textContent = 'OpenAI API key not configured.';
+        suggestionsDiv.textContent = 'OpenAI API key not configured.';
         return;
     }
 
@@ -163,10 +164,62 @@ const stopRecording = async () => {
 
         const data = await response.json();
         const summary = data.choices[0].message.content;
-        summaryDiv.textContent = summary;
+        suggestionsDiv.textContent = summary;
 
     } catch (err) {
         console.error('Error summarizing:', err);
-        summaryDiv.textContent = `Summarization Error: ${err.message}`;
+        suggestionsDiv.textContent = `Summarization Error: ${err.message}`;
     }
 };
+
+getSuggestionBtn.addEventListener('click', async () => {
+    suggestionsDiv.textContent = 'Generating suggestion...';
+    const transcriptText = transcriptDiv.textContent;
+
+    if (!transcriptText.trim()) {
+        suggestionsDiv.textContent = 'There is no text to get a suggestion for.';
+        return;
+    }
+
+    if (!OPENAI_API_KEY || OPENAI_API_KEY === "YOUR_OPENAI_API_KEY") {
+        alert("Please replace 'YOUR_OPENAI_API_KEY' in renderer.js to enable suggestions.");
+        suggestionsDiv.textContent = 'OpenAI API key not configured.';
+        return;
+    }
+
+    try {
+        const response = await fetch(openaiURL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-3.5-turbo',
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'You are an expert interview coach. The user was just asked the following question during an interview. Provide some key talking points and a concise sample answer.'
+                    },
+                    {
+                        role: 'user',
+                        content: transcriptText
+                    }
+                ]
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`OpenAI API Error: ${errorData.error.message}`);
+        }
+
+        const data = await response.json();
+        const suggestion = data.choices[0].message.content;
+        suggestionsDiv.textContent = suggestion;
+
+    } catch (err) {
+        console.error('Error getting suggestion:', err);
+        suggestionsDiv.textContent = `Suggestion Error: ${err.message}`;
+    }
+});

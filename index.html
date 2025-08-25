@@ -8,22 +8,23 @@
         #controls { padding: 10px; border-bottom: 1px solid #ccc; }
         #content { display: flex; flex: 1; }
         #transcript-container { flex: 1; padding: 10px; border-right: 1px solid #ccc; overflow-y: auto; }
-        #summary-container { flex: 1; padding: 10px; overflow-y: auto; }
+        #suggestions-container { flex: 1; padding: 10px; overflow-y: auto; }
         h2 { margin-top: 0; }
     </style>
 </head>
 <body>
     <div id="controls">
         <button id="startStopBtn">Start Recording</button>
+        <button id="getSuggestionBtn" style="margin-left: 10px;">Get Suggestion</button>
     </div>
     <div id="content">
         <div id="transcript-container">
             <h2>Live Transcript</h2>
             <div id="transcript"></div>
         </div>
-        <div id="summary-container">
-            <h2>Summary</h2>
-            <div id="summary"></div>
+        <div id="suggestions-container">
+            <h2>Suggestions</h2>
+            <div id="suggestions"></div>
         </div>
     </div>
     <script src="./renderer.js"></script>
