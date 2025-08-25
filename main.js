@@ -14,8 +14,10 @@ async function requestMediaPermissions() {
   }
 }
 
+let mainWindow;
+
 function createWindow() {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
     webPreferences: {
@@ -34,6 +36,13 @@ function createWindow() {
 // This handler will be called from the renderer process to get the screen sources
 ipcMain.handle('get-sources', async () => {
   return await desktopCapturer.getSources({ types: ['window', 'screen'] });
+});
+
+// This listener will be called from the renderer process to toggle stealth mode
+ipcMain.on('set-stealth-mode', (event, enable) => {
+  if (mainWindow) {
+    mainWindow.setContentProtection(enable);
+  }
 });
 
 app.whenReady().then(async () => {

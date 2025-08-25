@@ -4,6 +4,7 @@ const transcriptDiv = document.getElementById('transcript');
 const suggestionsDiv = document.getElementById('suggestions');
 const resumeInput = document.getElementById('resume-input');
 const jobDescInput = document.getElementById('job-desc-input');
+const stealthModeToggle = document.getElementById('stealth-mode-toggle');
 
 // --- State Variables ---
 let isRecording = false;
@@ -317,3 +318,8 @@ function displayStarFramework() {
         <p><strong>R - Result:</strong> What was the outcome? Quantify your success if possible.</p>
     `;
 }
+
+stealthModeToggle.addEventListener('change', (event) => {
+    const enable = event.target.checked;
+    window.electronAPI.setStealthMode(enable);
+});
