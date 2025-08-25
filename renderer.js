@@ -2,6 +2,8 @@ const startStopBtn = document.getElementById('startStopBtn');
 const getSuggestionBtn = document.getElementById('getSuggestionBtn');
 const transcriptDiv = document.getElementById('transcript');
 const suggestionsDiv = document.getElementById('suggestions');
+const resumeInput = document.getElementById('resume-input');
+const jobDescInput = document.getElementById('job-desc-input');
 
 // --- State Variables ---
 let isRecording = false;
@@ -146,6 +148,13 @@ const stopRecording = async () => {
     }
 
     try {
+        const resumeText = resumeInput.value;
+        const jobDescText = jobDescInput.value;
+
+        const systemPrompt = `You are an expert interview coach. Based on the following resume and job description, provide a personalized and strong answer to the user's question.`;
+
+        const userPrompt = `My resume:\n${resumeText}\n\nJob Description:\n${jobDescText}\n\nQuestion:\n${questionText}`;
+
         const response = await fetch(openaiURL, {
             method: 'POST',
             headers: {
@@ -208,11 +217,11 @@ async function getInterviewSuggestion(questionText) {
                 messages: [
                     {
                         role: 'system',
-                        content: 'You are an expert interview coach. The user was just asked the following question during an interview. Provide some key talking points and a concise sample answer.'
+                        content: systemPrompt
                     },
                     {
                         role: 'user',
-                        content: transcriptText
+                        content: userPrompt
                     }
                 ]
             })
