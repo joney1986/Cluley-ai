@@ -8,6 +8,8 @@ let isRecording = false;
 let socket;
 let recorder;
 let stream; // To hold the MediaStream object
+let finalizedTranscript = '';
+let currentUtterance = '';
 
 // --- AssemblyAI Configuration ---
 // IMPORTANT: Replace with your AssemblyAI API key
@@ -28,6 +30,8 @@ startStopBtn.addEventListener('click', async () => {
 const startRecording = async () => {
     transcriptDiv.textContent = 'Connecting...';
     suggestionsDiv.textContent = '';
+    finalizedTranscript = '';
+    currentUtterance = '';
 
     if (!ASSEMBLYAI_API_KEY || ASSEMBLYAI_API_KEY === "YOUR_ASSEMBLYAI_API_KEY") {
         alert("Please replace 'YOUR_ASSEMBLYAI_API_KEY' in renderer.js with your AssemblyAI API key.");
@@ -75,9 +79,15 @@ const startRecording = async () => {
 
         socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
-            if (data.message_type === 'FinalTranscript') {
-                 transcriptDiv.textContent += data.text + ' ';
+            if (data.message_type === 'PartialTranscript') {
+                currentUtterance = data.text;
+            } else if (data.message_type === 'FinalTranscript') {
+                const newText = data.text;
+                finalizedTranscript += newText + ' ';
+                currentUtterance = '';
+                detectQuestionAndSuggest(newText);
             }
+            transcriptDiv.textContent = finalizedTranscript + currentUtterance;
         };
 
         socket.onerror = (event) => {
@@ -151,7 +161,7 @@ const stopRecording = async () => {
                     },
                     {
                         role: 'user',
-                        content: transcriptText
+                        content: questionText
                     }
                 ]
             })
@@ -172,11 +182,10 @@ const stopRecording = async () => {
     }
 };
 
-getSuggestionBtn.addEventListener('click', async () => {
+async function getInterviewSuggestion(questionText) {
     suggestionsDiv.textContent = 'Generating suggestion...';
-    const transcriptText = transcriptDiv.textContent;
 
-    if (!transcriptText.trim()) {
+    if (!questionText.trim()) {
         suggestionsDiv.textContent = 'There is no text to get a suggestion for.';
         return;
     }
@@ -222,4 +231,17 @@ getSuggestionBtn.addEventListener('click', async () => {
         console.error('Error getting suggestion:', err);
         suggestionsDiv.textContent = `Suggestion Error: ${err.message}`;
     }
+}
+
+getSuggestionBtn.addEventListener('click', async () => {
+    const transcriptText = transcriptDiv.textContent;
+    getInterviewSuggestion(transcriptText);
 });
+
+function detectQuestionAndSuggest(text) {
+    const trimmedText = text.trim();
+    if (trimmedText.endsWith('?')) {
+        console.log('Question detected:', trimmedText);
+        getInterviewSuggestion(trimmedText);
+    }
+}
