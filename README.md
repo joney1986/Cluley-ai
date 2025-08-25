@@ -6,6 +6,7 @@ This is a desktop application built with Electron that provides real-time transc
 
 - **Real-Time Transcription**: Captures your desktop audio and provides a live transcript.
 - **AI-Powered Summarization**: Generates a summary and a list of action items from the transcript using OpenAI's GPT.
+- **Stealth Mode**: A toggle to hide the application window from screen captures and screen sharing, ensuring discreet use.
 - **Cross-Platform**: Built with Electron, with packaging configured for Linux, and can be extended for Windows and macOS.
 - **Invisible**: Listens to system audio without interfering with other applications.
 
