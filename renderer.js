@@ -238,10 +238,51 @@ getSuggestionBtn.addEventListener('click', async () => {
     getInterviewSuggestion(transcriptText);
 });
 
-function detectQuestionAndSuggest(text) {
+async function detectQuestionAndSuggest(text) {
     const trimmedText = text.trim();
-    if (trimmedText.endsWith('?')) {
-        console.log('Question detected:', trimmedText);
-        getInterviewSuggestion(trimmedText);
+    if (!trimmedText) return;
+
+    try {
+        const response = await fetch(openaiURL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-3.5-turbo',
+                messages: [
+                    {
+                        role: 'system',
+                        content: "Does the following sentence contain a question that a person should answer in an interview? Respond with only the single word 'yes' or 'no'."
+                    },
+                    {
+                        role: 'user',
+                        content: trimmedText
+                    }
+                ],
+                max_tokens: 3, // Limit response to a few tokens
+                temperature: 0.1 // Low temperature for deterministic response
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`OpenAI API Error for intent detection: ${errorData.error.message}`);
+        }
+
+        const data = await response.json();
+        const intentResponse = data.choices[0].message.content.trim().toLowerCase();
+
+        console.log(`Intent analysis for "${trimmedText}": ${intentResponse}`);
+
+        if (intentResponse.includes('yes')) {
+            console.log('Question detected, getting suggestion...');
+            getInterviewSuggestion(trimmedText);
+        }
+
+    } catch (err) {
+        console.error('Error in question detection:', err);
+        // We don't show this error in the UI to avoid cluttering the suggestions panel
     }
 }
